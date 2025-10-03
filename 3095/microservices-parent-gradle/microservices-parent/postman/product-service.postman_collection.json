@@ -1,0 +1,123 @@
+{
+  "info": {
+    "name": "product-service",
+    "_postman_id": "1a2b3c4d-5e6f-7890-abcd-ef0123456789",
+    "description": "CRUD for COMP3095 ICE1",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Get Products",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://localhost:8084/api/product",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8084",
+          "path": [
+            "api",
+            "product"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Create Product MacBook M3",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:8084/api/product",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8084",
+          "path": [
+            "api",
+            "product"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\": \"MacBook Pro\", \"description\": \"Apple MacBook Pro 16-inch\", \"price\": 2499.99}"
+        }
+      }
+    },
+    {
+      "name": "Get Product by ID",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://localhost:8084/api/product/:id",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8084",
+          "path": [
+            "api",
+            "product",
+            ":id"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Update Product",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:8084/api/product/:id",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8084",
+          "path": [
+            "api",
+            "product",
+            ":id"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\": \"MacBook Pro M4 Max\", \"description\": \"Apple MacBook Pro 16-inch with M4 Max\", \"price\": 7849.0}"
+        }
+      }
+    },
+    {
+      "name": "Delete Product",
+      "request": {
+        "method": "DELETE",
+        "url": {
+          "raw": "http://localhost:8084/api/product/:id",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8084",
+          "path": [
+            "api",
+            "product",
+            ":id"
+          ]
+        }
+      }
+    }
+  ]
+}
