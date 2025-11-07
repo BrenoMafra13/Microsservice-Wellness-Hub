@@ -1,3 +1,5 @@
+name: studentwellnesshub-integrated
+
 networks:
   appnet:
 
@@ -13,55 +15,61 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    ports:
-      - "${POSTGRES_PORT}:5432"
-    networks: [appnet]
     volumes:
       - pgdata:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 3s
       retries: 15
+    networks: [appnet]
 
   redis:
     image: redis:7-alpine
     container_name: redis-cache
-    command: ["redis-server", "--appendonly", "yes"]
+    command: ["redis-server","--appendonly","yes"]
     ports:
       - "${REDIS_PORT}:6379"
-    networks: [appnet]
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD","redis-cli","ping"]
       interval: 5s
       timeout: 3s
       retries: 15
+    networks: [appnet]
 
   mongo:
     image: mongo:6.0
-    container_name: mongo
-    ports:
-      - "${MONGO_PORT}:27017"
-    networks: [appnet]
+    container_name: mongo-db
+    environment:
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
     volumes:
       - mongodata:/data/db
+      - ./mongo/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "${MONGO_PORT}:27017"
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.runCommand({ ping: 1 })"]
-      interval: 5s
+      test: ["CMD-SHELL", "mongosh --username ${MONGO_INITDB_ROOT_USERNAME} --password ${MONGO_INITDB_ROOT_PASSWORD} --eval 'db.runCommand({ ping: 1 })' --authenticationDatabase admin || exit 1"]
+      interval: 10s
       timeout: 5s
-      retries: 15
+      retries: 20
+    networks: [appnet]
 
   mongo-express:
-    image: mongo-express:latest
+    image: mongo-express:1.0.2-20
     container_name: mongo-express
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      ME_CONFIG_MONGODB_URL: mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongo:27017/
     depends_on:
       mongo:
         condition: service_healthy
-    environment:
-      ME_CONFIG_MONGODB_URL: ${GOAL_MONGO_URI}
-      ME_CONFIG_BASICAUTH: "false"
     ports:
-      - "${MONGO_EXPRESS_PORT}:8081"
+      - "8087:8081"
     networks: [appnet]
 
   wellness-resource-service:
@@ -76,12 +84,13 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://${WELLNESS_DB_HOST}:${WELLNESS_DB_PORT}/${WELLNESS_DB}
       SPRING_DATASOURCE_USERNAME: ${WELLNESS_DB_USER}
       SPRING_DATASOURCE_PASSWORD: ${WELLNESS_DB_PASS}
-      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
       SPRING_FLYWAY_ENABLED: "true"
       SPRING_FLYWAY_BASELINE_ON_MIGRATE: "true"
+
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: ${REDIS_PORT}
       SPRING_CACHE_TYPE: redis
+
       SERVER_PORT: ${WELLNESS_PORT}
     ports:
       - "${WELLNESS_PORT}:${WELLNESS_PORT}"
@@ -98,7 +107,6 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://${EVENT_DB_HOST}:${EVENT_DB_PORT}/${EVENT_DB}
       SPRING_DATASOURCE_USERNAME: ${EVENT_DB_USER}
       SPRING_DATASOURCE_PASSWORD: ${EVENT_DB_PASS}
-      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
       SPRING_FLYWAY_ENABLED: "true"
       SPRING_FLYWAY_BASELINE_ON_MIGRATE: "true"
       SERVER_PORT: ${EVENT_PORT}
@@ -114,10 +122,9 @@ services:
       mongo:
         condition: service_healthy
     environment:
-      SPRING_DATA_MONGODB_URI: ${GOAL_MONGO_URI}
+      SPRING_DATA_MONGODB_URI: mongodb://${MONGO_APP_USER}:${MONGO_APP_PASS}@mongo:27017/${MONGO_INITDB_DATABASE}?authSource=admin
       SERVER_PORT: ${GOAL_PORT}
     ports:
       - "${GOAL_PORT}:${GOAL_PORT}"
     networks: [appnet]
     restart: unless-stopped
-
