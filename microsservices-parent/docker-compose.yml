@@ -65,6 +65,9 @@ services:
     networks: [appnet]
 
   wellness-resource-service:
+    build:
+      context: ./wellness-resource-service
+      dockerfile: Dockerfile
     image: wellness-resource-service:local
     container_name: wellness-resource
     depends_on:
@@ -89,6 +92,9 @@ services:
     restart: unless-stopped
 
   event-service:
+    build:
+      context: ./event-service
+      dockerfile: Dockerfile
     image: event-service:local
     container_name: event-service
     depends_on:
@@ -108,6 +114,9 @@ services:
     restart: unless-stopped
 
   goal-tracking-service:
+    build:
+      context: ./goal-tracking-service
+      dockerfile: Dockerfile
     image: goal-tracking-service:local
     container_name: goal-tracking
     depends_on:
@@ -120,4 +129,3 @@ services:
       - "${GOAL_PORT}:${GOAL_PORT}"
     networks: [appnet]
     restart: unless-stopped
-
