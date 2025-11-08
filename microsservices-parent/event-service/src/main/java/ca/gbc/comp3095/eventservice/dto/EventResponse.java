@@ -3,7 +3,7 @@ package ca.gbc.comp3095.eventservice.dto;
 import java.time.LocalDate;
 
 public record EventResponse(
-        Long eventId,
+        Long id,
         String title,
         String description,
         LocalDate date,
