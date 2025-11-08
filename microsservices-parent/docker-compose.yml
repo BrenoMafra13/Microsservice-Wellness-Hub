@@ -1,3 +1,5 @@
+name: studentwellnesshub-integrated
+
 networks:
   appnet:
 
@@ -6,6 +8,7 @@ volumes:
   mongodata:
 
 services:
+  # ---------- Databases & cache ----------
   db:
     image: postgres:12-alpine
     container_name: pg-db
@@ -40,13 +43,22 @@ services:
   mongo:
     image: mongo:6.0
     container_name: mongo
+    environment:
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
     ports:
       - "${MONGO_PORT}:27017"
     networks: [appnet]
     volumes:
       - mongodata:/data/db
+      - ./docker/integrated/mongo/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.runCommand({ ping: 1 })"]
+      test: ["CMD", "mongosh",
+             "--username", "${MONGO_INITDB_ROOT_USERNAME}",
+             "--password", "${MONGO_INITDB_ROOT_PASSWORD}",
+             "--authenticationDatabase", "admin",
+             "--eval", "db.adminCommand({ ping: 1 })"]
       interval: 5s
       timeout: 5s
       retries: 15
@@ -64,6 +76,7 @@ services:
       - "${MONGO_EXPRESS_PORT}:8081"
     networks: [appnet]
 
+  # ---------- Microservices ----------
   wellness-resource-service:
     build:
       context: ./wellness-resource-service
@@ -76,15 +89,25 @@ services:
       redis:
         condition: service_healthy
     environment:
+      SERVER_PORT: ${WELLNESS_PORT}
+
       SPRING_DATASOURCE_URL: jdbc:postgresql://${WELLNESS_DB_HOST}:${WELLNESS_DB_PORT}/${WELLNESS_DB}
       SPRING_DATASOURCE_USERNAME: ${WELLNESS_DB_USER}
       SPRING_DATASOURCE_PASSWORD: ${WELLNESS_DB_PASS}
       SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
+
+      SPRING_JPA_HIBERNATE_DDL_AUTO: none
       SPRING_FLYWAY_ENABLED: "true"
+<<<<<<< Updated upstream
+=======
+      SPRING_FLYWAY_BASELINE_ON_MIGRATE: "true"
+      SPRING_FLYWAY_SCHEMAS: wellness
+      SPRING_FLYWAY_TABLE: flyway_history_wellness
+
+>>>>>>> Stashed changes
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: ${REDIS_PORT}
       SPRING_CACHE_TYPE: redis
-      SERVER_PORT: ${WELLNESS_PORT}
     ports:
       - "${WELLNESS_PORT}:${WELLNESS_PORT}"
     networks: [appnet]
@@ -100,12 +123,22 @@ services:
       db:
         condition: service_healthy
     environment:
+      SERVER_PORT: ${EVENT_PORT}
+
       SPRING_DATASOURCE_URL: jdbc:postgresql://${EVENT_DB_HOST}:${EVENT_DB_PORT}/${EVENT_DB}
       SPRING_DATASOURCE_USERNAME: ${EVENT_DB_USER}
       SPRING_DATASOURCE_PASSWORD: ${EVENT_DB_PASS}
       SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
+
+      SPRING_JPA_HIBERNATE_DDL_AUTO: none
       SPRING_FLYWAY_ENABLED: "true"
+<<<<<<< Updated upstream
       SERVER_PORT: ${EVENT_PORT}
+=======
+      SPRING_FLYWAY_BASELINE_ON_MIGRATE: "true"
+      SPRING_FLYWAY_SCHEMAS: event
+      SPRING_FLYWAY_TABLE: flyway_history_event
+>>>>>>> Stashed changes
     ports:
       - "${EVENT_PORT}:${EVENT_PORT}"
     networks: [appnet]
@@ -121,8 +154,8 @@ services:
       mongo:
         condition: service_healthy
     environment:
-      SPRING_DATA_MONGODB_URI: ${GOAL_MONGO_URI}
       SERVER_PORT: ${GOAL_PORT}
+      SPRING_DATA_MONGODB_URI: ${GOAL_MONGO_URI}
     ports:
       - "${GOAL_PORT}:${GOAL_PORT}"
     networks: [appnet]
