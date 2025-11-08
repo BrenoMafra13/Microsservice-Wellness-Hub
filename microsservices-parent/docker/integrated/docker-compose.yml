@@ -1,0 +1,133 @@
+name: studentwellnesshub-integrated
+
+networks:
+  appnet:
+
+volumes:
+  pgdata:
+  mongodata:
+
+services:
+  db:
+    image: postgres:12-alpine
+    container_name: pg-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    networks: [appnet]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis-cache
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT}:6379"
+    networks: [appnet]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+
+  mongo:
+    image: mongo:6.0
+    container_name: mongo
+    ports:
+      - "${MONGO_PORT}:27017"
+    networks: [appnet]
+    volumes:
+      - mongodata:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.runCommand({ ping: 1 })"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  mongo-express:
+    image: mongo-express:latest
+    container_name: mongo-express
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      ME_CONFIG_MONGODB_URL: ${GOAL_MONGO_URI}
+      ME_CONFIG_BASICAUTH: "false"
+    ports:
+      - "${MONGO_EXPRESS_PORT}:8081"
+    networks: [appnet]
+
+  wellness-resource-service:
+    build:
+      context: ./wellness-resource-service
+      dockerfile: Dockerfile
+    image: wellness-resource-service:local
+    container_name: wellness-resource
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${WELLNESS_DB_HOST}:${WELLNESS_DB_PORT}/${WELLNESS_DB}
+      SPRING_DATASOURCE_USERNAME: ${WELLNESS_DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${WELLNESS_DB_PASS}
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
+      SPRING_FLYWAY_ENABLED: "true"
+      SPRING_FLYWAY_BASELINE_ON_MIGRATE: "true"
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: ${REDIS_PORT}
+      SPRING_CACHE_TYPE: redis
+      SERVER_PORT: ${WELLNESS_PORT}
+    ports:
+      - "${WELLNESS_PORT}:${WELLNESS_PORT}"
+    networks: [appnet]
+    restart: unless-stopped
+
+  event-service:
+    build:
+      context: ./event-service
+      dockerfile: Dockerfile
+    image: event-service:local
+    container_name: event-service
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${EVENT_DB_HOST}:${EVENT_DB_PORT}/${EVENT_DB}
+      SPRING_DATASOURCE_USERNAME: ${EVENT_DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${EVENT_DB_PASS}
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
+      SPRING_FLYWAY_ENABLED: "true"
+      SPRING_FLYWAY_BASELINE_ON_MIGRATE: "true"
+      SERVER_PORT: ${EVENT_PORT}
+    ports:
+      - "${EVENT_PORT}:${EVENT_PORT}"
+    networks: [appnet]
+    restart: unless-stopped
+
+  goal-tracking-service:
+    build:
+      context: ./goal-tracking-service
+      dockerfile: Dockerfile
+    image: goal-tracking-service:local
+    container_name: goal-tracking
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      SPRING_DATA_MONGODB_URI: ${GOAL_MONGO_URI}
+      SERVER_PORT: ${GOAL_PORT}
+    ports:
+      - "${GOAL_PORT}:${GOAL_PORT}"
+    networks: [appnet]
+    restart: unless-stopped
