@@ -2,12 +2,15 @@ package ca.gbc.comp3095.eventservice.service;
 
 import ca.gbc.comp3095.eventservice.dto.EventRequest;
 import ca.gbc.comp3095.eventservice.dto.EventResponse;
+import ca.gbc.comp3095.eventservice.exception.EventNotFoundException;
 import ca.gbc.comp3095.eventservice.model.Event;
 import ca.gbc.comp3095.eventservice.repository.EventRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -41,13 +44,12 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public EventResponse getEventById(Long id) {
-        Event event = repository.findById(id).orElseThrow(() -> new RuntimeException("Event not found"));
-        return mapToResponse(event);
+        return mapToResponse(findEvent(id));
     }
 
     @Override
     public EventResponse updateEvent(Long id, EventRequest request) {
-        Event event = repository.findById(id).orElseThrow(() -> new RuntimeException("Event not found"));
+        Event event = findEvent(id);
         event.setTitle(request.title());
         event.setDescription(request.description());
         event.setDate(request.date());
@@ -60,43 +62,43 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public void deleteEvent(Long id) {
-        repository.deleteById(id);
+        repository.delete(findEvent(id));
     }
 
     @Override
     public List<EventResponse> getEventsByDate(LocalDate date) {
-        return repository.findAll().stream()
-                .filter(e -> e.getDate().isEqual(date))
-                .map(this::mapToResponse)
-                .toList();
+        return repository.findByDate(date).stream().map(this::mapToResponse).toList();
     }
 
     @Override
     public List<EventResponse> getEventsByLocation(String location) {
-        return repository.findAll().stream()
-                .filter(e -> e.getLocation().equalsIgnoreCase(location))
-                .map(this::mapToResponse)
-                .toList();
+        return repository.findByLocationIgnoreCase(location).stream().map(this::mapToResponse).toList();
     }
 
     @Override
     public EventResponse registerStudent(Long id) {
-        Event event = repository.findById(id).orElseThrow(() -> new RuntimeException("Event not found"));
-        if (event.getRegisteredStudents() < event.getCapacity()) {
-            event.setRegisteredStudents(event.getRegisteredStudents() + 1);
-            repository.save(event);
+        Event event = findEvent(id);
+        if (event.getRegisteredStudents() >= event.getCapacity()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Event is at capacity");
         }
+        event.setRegisteredStudents(event.getRegisteredStudents() + 1);
+        repository.save(event);
         return mapToResponse(event);
     }
 
     @Override
     public EventResponse unregisterStudent(Long id) {
-        Event event = repository.findById(id).orElseThrow(() -> new RuntimeException("Event not found"));
-        if (event.getRegisteredStudents() > 0) {
-            event.setRegisteredStudents(event.getRegisteredStudents() - 1);
-            repository.save(event);
+        Event event = findEvent(id);
+        if (event.getRegisteredStudents() == 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No registrations to remove");
         }
+        event.setRegisteredStudents(event.getRegisteredStudents() - 1);
+        repository.save(event);
         return mapToResponse(event);
+    }
+
+    private Event findEvent(Long id) {
+        return repository.findById(id).orElseThrow(() -> new EventNotFoundException(id));
     }
 
     private EventResponse mapToResponse(Event event) {

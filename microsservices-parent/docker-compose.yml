@@ -1,55 +1,80 @@
-networks:
-  appnet:
-
-volumes:
-  pgdata:
-  mongodata:
+name: studentwellnesshub
 
 services:
-  db:
-    image: postgres:12-alpine
-    container_name: pg-db
+  postgres-event:
+    image: postgres:16-alpine
+    container_name: postgres-event
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_DB: ${EVENT_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "${POSTGRES_PORT}:5432"
-    networks: [appnet]
+      - "${POSTGRES_EVENT_PORT}:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - ./docker/integrated/postgres/event/data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${EVENT_DB}"]
       interval: 5s
       timeout: 3s
       retries: 15
+    networks: [appnet]
+
+  postgres-wellness:
+    image: postgres:16-alpine
+    container_name: postgres-wellness
+    environment:
+      POSTGRES_DB: ${WELLNESS_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_WELLNESS_PORT}:5432"
+    volumes:
+      - ./docker/integrated/postgres/wellness/data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${WELLNESS_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+    networks: [appnet]
 
   redis:
     image: redis:7-alpine
-    container_name: redis-cache
+    container_name: redis
     command: ["redis-server", "--appendonly", "yes"]
     ports:
       - "${REDIS_PORT}:6379"
-    networks: [appnet]
+    volumes:
+      - ./docker/integrated/redis/data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 15
+    networks: [appnet]
+
+  redis-insight:
+    image: redislabs/redisinsight:1.14.0
+    container_name: redis-insight
+    ports:
+      - "${REDIS_INSIGHT_PORT}:8001"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks: [appnet]
 
   mongo:
     image: mongo:6.0
     container_name: mongo
     ports:
       - "${MONGO_PORT}:27017"
-    networks: [appnet]
     volumes:
-      - mongodata:/data/db
+      - ./docker/integrated/mongo/data:/data/db
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.runCommand({ ping: 1 })"]
       interval: 5s
       timeout: 5s
       retries: 15
+    networks: [appnet]
 
   mongo-express:
     image: mongo-express:latest
@@ -64,31 +89,20 @@ services:
       - "${MONGO_EXPRESS_PORT}:8081"
     networks: [appnet]
 
-  wellness-resource-service:
-    build:
-      context: ./wellness-resource-service
-      dockerfile: Dockerfile
-    image: wellness-resource-service:local
-    container_name: wellness-resource
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+  pgadmin:
+    image: dpage/pgadmin4:9.2
+    container_name: pgadmin
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://${WELLNESS_DB_HOST}:${WELLNESS_DB_PORT}/${WELLNESS_DB}
-      SPRING_DATASOURCE_USERNAME: ${WELLNESS_DB_USER}
-      SPRING_DATASOURCE_PASSWORD: ${WELLNESS_DB_PASS}
-      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
-      SPRING_FLYWAY_ENABLED: "true"
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_DATA_REDIS_PORT: ${REDIS_PORT}
-      SPRING_CACHE_TYPE: redis
-      SERVER_PORT: ${WELLNESS_PORT}
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
     ports:
-      - "${WELLNESS_PORT}:${WELLNESS_PORT}"
+      - "8888:80"
+    depends_on:
+      postgres-event:
+        condition: service_healthy
+      postgres-wellness:
+        condition: service_healthy
     networks: [appnet]
-    restart: unless-stopped
 
   event-service:
     build:
@@ -96,18 +110,31 @@ services:
       dockerfile: Dockerfile
     image: event-service:local
     container_name: event-service
-    depends_on:
-      db:
-        condition: service_healthy
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://${EVENT_DB_HOST}:${EVENT_DB_PORT}/${EVENT_DB}
-      SPRING_DATASOURCE_USERNAME: ${EVENT_DB_USER}
-      SPRING_DATASOURCE_PASSWORD: ${EVENT_DB_PASS}
-      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
-      SPRING_FLYWAY_ENABLED: "true"
-      SERVER_PORT: ${EVENT_PORT}
+      SPRING_PROFILES_ACTIVE: docker
     ports:
-      - "${EVENT_PORT}:${EVENT_PORT}"
+      - "${EVENT_PORT}:8085"
+    depends_on:
+      postgres-event:
+        condition: service_healthy
+    networks: [appnet]
+    restart: unless-stopped
+
+  wellness-resource-service:
+    build:
+      context: ./wellness-resource-service
+      dockerfile: Dockerfile
+    image: wellness-resource-service:local
+    container_name: wellness-resource-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    ports:
+      - "${WELLNESS_PORT}:8081"
+    depends_on:
+      postgres-wellness:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks: [appnet]
     restart: unless-stopped
 
@@ -116,14 +143,37 @@ services:
       context: ./goal-tracking-service
       dockerfile: Dockerfile
     image: goal-tracking-service:local
-    container_name: goal-tracking
+    container_name: goal-tracking-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    ports:
+      - "${GOAL_PORT}:8086"
     depends_on:
       mongo:
         condition: service_healthy
-    environment:
-      SPRING_DATA_MONGODB_URI: ${GOAL_MONGO_URI}
-      SERVER_PORT: ${GOAL_PORT}
-    ports:
-      - "${GOAL_PORT}:${GOAL_PORT}"
     networks: [appnet]
     restart: unless-stopped
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    image: api-gateway:local
+    container_name: api-gateway
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    ports:
+      - "${API_GATEWAY_PORT}:9000"
+    depends_on:
+      event-service:
+        condition: service_started
+      wellness-resource-service:
+        condition: service_started
+      goal-tracking-service:
+        condition: service_started
+    networks: [appnet]
+    restart: unless-stopped
+
+networks:
+  appnet:
+    driver: bridge
