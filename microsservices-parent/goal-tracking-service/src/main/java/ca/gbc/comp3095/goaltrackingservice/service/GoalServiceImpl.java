@@ -3,6 +3,7 @@ package ca.gbc.comp3095.goaltrackingservice.service;
 import ca.gbc.comp3095.goaltrackingservice.dto.GoalRequest;
 import ca.gbc.comp3095.goaltrackingservice.dto.GoalResponse;
 import ca.gbc.comp3095.goaltrackingservice.exception.GoalNotFoundException;
+import ca.gbc.comp3095.goaltrackingservice.messaging.GoalEventPublisher;
 import ca.gbc.comp3095.goaltrackingservice.model.Goal;
 import ca.gbc.comp3095.goaltrackingservice.model.GoalStatus;
 import ca.gbc.comp3095.goaltrackingservice.repository.GoalRepository;
@@ -19,6 +20,7 @@ import org.springframework.web.server.ResponseStatusException;
 public class GoalServiceImpl implements GoalService {
 
     private final GoalRepository goalRepository;
+    private final GoalEventPublisher goalEventPublisher;
 
     @Override
     public GoalResponse createGoal(GoalRequest request) {
@@ -64,6 +66,7 @@ public class GoalServiceImpl implements GoalService {
         Goal goal = findGoal(id);
         goal.setStatus(GoalStatus.COMPLETED);
         Goal updated = goalRepository.save(goal);
+        goalEventPublisher.publishCompleted(updated);
         return mapToResponse(updated);
     }
 
