@@ -3,10 +3,17 @@ package ca.gbc.comp3095.eventservice.service;
 import ca.gbc.comp3095.eventservice.messaging.GoalCompletedEvent;
 import ca.gbc.comp3095.eventservice.model.Event;
 import ca.gbc.comp3095.eventservice.repository.EventRepository;
+import ca.gbc.comp3095.eventservice.messaging.ResourceSummary;
 import java.time.LocalDate;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import java.util.Collections;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -15,6 +22,10 @@ import org.springframework.stereotype.Service;
 public class EventRecommendationService {
 
     private final EventRepository eventRepository;
+    private final RestTemplate restTemplate;
+
+    @Value("${wellness.service.url}")
+    private String wellnessServiceUrl;
 
     public void handleGoalCompleted(GoalCompletedEvent event) {
         String keyword = event.category() == null ? "" : event.category();
@@ -27,5 +38,21 @@ public class EventRecommendationService {
 
         log.info("Recommended {} events for goalId={} category={}", matches.size(), event.goalId(), keyword);
         matches.forEach(e -> log.info(" - {} on {} at {}", e.getTitle(), e.getDate(), e.getLocation()));
+
+        List<ResourceSummary> resources = fetchResourcesByCategory(keyword);
+        log.info("Fetched {} resources for category={}", resources.size(), keyword);
+    }
+
+    @CircuitBreaker(name = "wellnessResources", fallbackMethod = "fallbackResources")
+    public List<ResourceSummary> fetchResourcesByCategory(String category) {
+        String url = String.format("%s/api/resources?category=%s", wellnessServiceUrl, category);
+        ResponseEntity<ResourceSummary[]> response = restTemplate.getForEntity(url, ResourceSummary[].class);
+        ResourceSummary[] body = response.getBody();
+        return body == null ? Collections.emptyList() : List.of(body);
+    }
+
+    public List<ResourceSummary> fallbackResources(String category, Throwable throwable) {
+        log.warn("Fallback resources for category {}: {}", category, throwable.getMessage());
+        return Collections.emptyList();
     }
 }
