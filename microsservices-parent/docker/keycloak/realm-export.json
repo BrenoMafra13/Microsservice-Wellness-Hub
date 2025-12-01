@@ -1,0 +1,55 @@
+{
+  "realm": "wellness-hub",
+  "enabled": true,
+  "displayName": "Student Wellness Hub",
+  "loginWithEmailAllowed": true,
+  "registrationAllowed": false,
+  "verifyEmail": false,
+  "roles": {
+    "realm": [
+      { "name": "student", "description": "Student role for setting goals and registering for events" },
+      { "name": "staff", "description": "Staff role for managing wellness resources" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "api-gateway",
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [ "*" ],
+      "webOrigins": [ "*" ],
+      "attributes": {
+        "post.logout.redirect.uris": "*"
+      },
+      "defaultClientScopes": [ "roles", "profile", "email" ],
+      "optionalClientScopes": [ "address", "phone", "microprofile-jwt" ]
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "email": "admin@student.example.com",
+      "firstName": "Student",
+      "lastName": "Admin",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [ { "type": "password", "value": "password", "temporary": false } ],
+      "realmRoles": [ "student" ],
+      "requiredActions": []
+    },
+    {
+      "username": "admin-staff",
+      "email": "admin@staff.example.com",
+      "firstName": "Staff",
+      "lastName": "Admin",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [ { "type": "password", "value": "password", "temporary": false } ],
+      "realmRoles": [ "staff" ],
+      "requiredActions": []
+    }
+  ]
+}
