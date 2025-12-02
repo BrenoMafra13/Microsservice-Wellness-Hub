@@ -34,6 +34,12 @@ public class WellnessResourceController {
         return _wellnessResourceService.getAllResources();
     }
 
+    @GetMapping("/{id}")
+    @ResponseStatus(HttpStatus.OK)
+    public WellnessResourceResponse getResourceById(@PathVariable Long id) {
+        return _wellnessResourceService.getResourceById(id);
+    }
+
     @PutMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
     public WellnessResourceResponse updateResource(

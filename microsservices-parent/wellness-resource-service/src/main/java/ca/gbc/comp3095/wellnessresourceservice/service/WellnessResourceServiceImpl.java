@@ -50,6 +50,15 @@ public class WellnessResourceServiceImpl implements WellnessResourceService {
     }
 
     @Override
+    @Cacheable(key = "'id:' + #id")
+    @Transactional(readOnly = true)
+    public WellnessResourceResponse getResourceById(Long id) {
+        log.info("Fetching resource with id {}", id);
+        WellnessResource resource = findResource(id);
+        return mapToResponse(resource);
+    }
+
+    @Override
     @Transactional
     @CacheEvict(allEntries = true)
     public WellnessResourceResponse updateResource(Long id, WellnessResourceRequest resourceRequest) {
