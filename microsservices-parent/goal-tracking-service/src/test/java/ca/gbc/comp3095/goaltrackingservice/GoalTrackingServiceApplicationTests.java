@@ -9,18 +9,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.http.HttpStatus;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.testcontainers.containers.MongoDBContainer;
-import org.springframework.boot.test.mock.mockito.MockBean;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class GoalTrackingServiceApplicationTests {
 
 	@ServiceConnection
 	static MongoDBContainer mongoDBContainer = new MongoDBContainer("mongo:6.0");
-
-	@MockBean
-	private KafkaTemplate<String, ca.gbc.comp3095.goaltrackingservice.messaging.GoalCompletedEvent> kafkaTemplate;
 
 	@LocalServerPort
 	private Integer port;

@@ -1,92 +1,7 @@
 name: studentwellnesshub
 
 services:
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.7.1
-    container_name: zookeeper
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    ports:
-      - "2181:2181"
-    networks: [appnet]
-
-  kafka:
-    image: confluentinc/cp-kafka:7.7.1
-    container_name: kafka
-    depends_on:
-      - zookeeper
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-    ports:
-      - "9092:9092"
-      - "29092:29092"
-    networks: [appnet]
-
-  schema-registry:
-    image: confluentinc/cp-schema-registry:7.7.1
-    container_name: schema-registry
-    depends_on:
-      - kafka
-    environment:
-      SCHEMA_REGISTRY_HOST_NAME: schema-registry
-      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:9092
-    ports:
-      - "18081:8081"
-    networks: [appnet]
-
-  postgres-keycloak:
-    image: postgres:16-alpine
-    container_name: postgres-keycloak
-    environment:
-      POSTGRES_DB: ${KEYCLOAK_DB}
-      POSTGRES_USER: ${KEYCLOAK_DB_USER}
-      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
-    ports:
-      - "${POSTGRES_KEYCLOAK_PORT}:5432"
-    volumes:
-      - ./docker/integrated/postgres/keycloak/data:/var/lib/postgresql/data
-      - ./docker/integrated/postgres/keycloak/init:/docker-entrypoint-initdb.d
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${KEYCLOAK_DB_USER} -d ${KEYCLOAK_DB}"]
-      interval: 5s
-      timeout: 3s
-      retries: 15
-    networks: [appnet]
-
-  keycloak:
-    image: quay.io/keycloak/keycloak:24.0.1
-    container_name: keycloak
-    environment:
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: password
-      KC_DB: postgres
-      KC_DB_URL_HOST: ${KEYCLOAK_DB_HOST}
-      KC_DB_URL_PORT: ${KEYCLOAK_DB_PORT}
-      KC_DB_URL_DATABASE: ${KEYCLOAK_DB}
-      KC_DB_USERNAME: ${KEYCLOAK_DB_USER}
-      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
-      KC_HOSTNAME: keycloak
-      KC_HOSTNAME_PORT: 8080
-      KC_HOSTNAME_STRICT: "false"
-      KC_HOSTNAME_STRICT_HTTPS: "false"
-    command: ["start-dev", "--import-realm"]
-    depends_on:
-      postgres-keycloak:
-        condition: service_healthy
-    volumes:
-      - ./docker/keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json
-    ports:
-      - "18080:8080"
-    networks: [appnet]
-
+  # ========== Databases ==========
   postgres-event:
     image: postgres:16-alpine
     container_name: postgres-event
@@ -138,16 +53,6 @@ services:
       retries: 15
     networks: [appnet]
 
-  redis-insight:
-    image: redislabs/redisinsight:1.14.0
-    container_name: redis-insight
-    ports:
-      - "${REDIS_INSIGHT_PORT}:8001"
-    depends_on:
-      redis:
-        condition: service_healthy
-    networks: [appnet]
-
   mongo:
     image: mongo:6.0
     container_name: mongo
@@ -156,11 +61,86 @@ services:
     volumes:
       - ./docker/integrated/mongo/data:/data/db
     healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ ping: 1 })"]
+      test: ["CMD", "mongosh", "--eval", "db.runCommand({ ping: 1 })"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+    networks: [appnet]
+
+  # ========== Kafka & Zookeeper ==========
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks: [appnet]
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
       interval: 10s
-      timeout: 10s
-      start_period: 40s
-      retries: 30
+      timeout: 5s
+      retries: 10
+    networks: [appnet]
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.5.0
+    container_name: schema-registry
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8083:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:9092
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+    networks: [appnet]
+
+  # ========== Keycloak ==========
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0.7
+    container_name: keycloak
+    command:
+      - start-dev
+      - --import-realm
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./keycloak/realms:/opt/keycloak/data/import
+
+    networks: [appnet]
+
+  # ========== Management Tools ==========
+  redis-insight:
+    image: redislabs/redisinsight:1.14.0
+    container_name: redis-insight
+    ports:
+      - "${REDIS_INSIGHT_PORT}:8001"
+    depends_on:
+      redis:
+        condition: service_healthy
     networks: [appnet]
 
   mongo-express:
@@ -173,7 +153,7 @@ services:
       ME_CONFIG_MONGODB_URL: ${GOAL_MONGO_URI}
       ME_CONFIG_BASICAUTH: "false"
     ports:
-      - "${MONGO_EXPRESS_PORT}:8081"
+      - "${MONGO_EXPRESS_PORT}:8087"
     networks: [appnet]
 
   pgadmin:
@@ -191,6 +171,21 @@ services:
         condition: service_healthy
     networks: [appnet]
 
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8090:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_SCHEMAREGISTRY: http://schema-registry:8081
+    networks: [appnet]
+
+  # ========== Microservices ==========
   event-service:
     build:
       context: ./event-service
@@ -203,6 +198,8 @@ services:
       - "${EVENT_PORT}:8085"
     depends_on:
       postgres-event:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
     networks: [appnet]
     restart: unless-stopped
@@ -238,6 +235,8 @@ services:
     depends_on:
       mongo:
         condition: service_healthy
+      kafka:
+        condition: service_healthy
     networks: [appnet]
     restart: unless-stopped
 
@@ -257,6 +256,8 @@ services:
       wellness-resource-service:
         condition: service_started
       goal-tracking-service:
+        condition: service_started
+      keycloak:
         condition: service_started
     networks: [appnet]
     restart: unless-stopped
