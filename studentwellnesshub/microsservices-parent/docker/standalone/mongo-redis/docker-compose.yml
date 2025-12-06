@@ -1,0 +1,23 @@
+name: swh-standalone-mongo-redis
+
+volumes:
+  mongodata:
+
+services:
+  mongo:
+    image: mongo:6.0
+    environment:
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    ports:
+      - "${MONGO_PORT}:27017"
+    volumes:
+      - mongodata:/data/db
+      - ../../integrated/mongo/init:/docker-entrypoint-initdb.d:ro
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server","--appendonly","yes"]
+    ports:
+      - "${REDIS_PORT}:6379"

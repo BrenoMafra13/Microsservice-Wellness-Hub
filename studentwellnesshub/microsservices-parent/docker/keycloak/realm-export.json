@@ -1,0 +1,89 @@
+{
+  "realm": "studentwellnesshub",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "clients": [
+    {
+      "clientId": "wellness-hub-client",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "wellness-hub-secret",
+      "redirectUris": ["*"],
+      "webOrigins": ["*"],
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect"
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "student",
+        "description": "Student role for creating goals and registering for events"
+      },
+      {
+        "name": "staff",
+        "description": "Staff role for managing wellness resources"
+      },
+      {
+        "name": "admin",
+        "description": "Admin role with full access"
+      }
+    ]
+  },
+  "users": [
+    {
+      "username": "student1",
+      "enabled": true,
+      "email": "student1@gbc.ca",
+      "firstName": "John",
+      "lastName": "Student",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "student123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["student"]
+    },
+    {
+      "username": "staff1",
+      "enabled": true,
+      "email": "staff1@gbc.ca",
+      "firstName": "Jane",
+      "lastName": "Staff",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "staff123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["staff"]
+    },
+    {
+      "username": "admin1",
+      "enabled": true,
+      "email": "admin1@gbc.ca",
+      "firstName": "Admin",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["admin", "student", "staff"]
+    }
+  ]
+}

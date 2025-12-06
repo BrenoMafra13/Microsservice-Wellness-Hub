@@ -1,0 +1,179 @@
+name: studentwellnesshub-integrated
+
+services:
+  postgres-event:
+    image: postgres:16-alpine
+    container_name: postgres-event
+    environment:
+      POSTGRES_DB: ${EVENT_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_EVENT_PORT}:5432"
+    volumes:
+      - ./postgres/event/data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${EVENT_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+    networks: [appnet]
+
+  postgres-wellness:
+    image: postgres:16-alpine
+    container_name: postgres-wellness
+    environment:
+      POSTGRES_DB: ${WELLNESS_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_WELLNESS_PORT}:5432"
+    volumes:
+      - ./postgres/wellness/data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${WELLNESS_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+    networks: [appnet]
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+      - ./redis/data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+    networks: [appnet]
+
+  redis-insight:
+    image: redislabs/redisinsight:1.14.0
+    container_name: redis-insight
+    ports:
+      - "${REDIS_INSIGHT_PORT}:8001"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks: [appnet]
+
+  mongo:
+    image: mongo:6.0
+    container_name: mongo
+    ports:
+      - "${MONGO_PORT}:27017"
+    volumes:
+      - ./mongo/data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.runCommand({ ping: 1 })"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+    networks: [appnet]
+
+  mongo-express:
+    image: mongo-express:latest
+    container_name: mongo-express
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      ME_CONFIG_MONGODB_URL: ${GOAL_MONGO_URI}
+      ME_CONFIG_BASICAUTH: "false"
+    ports:
+      - "${MONGO_EXPRESS_PORT}:8081"
+    networks: [appnet]
+
+  pgadmin:
+    image: dpage/pgadmin4:9.2
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+    ports:
+      - "8888:80"
+    depends_on:
+      postgres-event:
+        condition: service_healthy
+      postgres-wellness:
+        condition: service_healthy
+    networks: [appnet]
+
+  event-service:
+    build:
+      context: ../event-service
+      dockerfile: Dockerfile
+    image: event-service:local
+    container_name: event-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    ports:
+      - "${EVENT_PORT}:8085"
+    depends_on:
+      postgres-event:
+        condition: service_healthy
+    networks: [appnet]
+    restart: unless-stopped
+
+  wellness-resource-service:
+    build:
+      context: ../wellness-resource-service
+      dockerfile: Dockerfile
+    image: wellness-resource-service:local
+    container_name: wellness-resource-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    ports:
+      - "${WELLNESS_PORT}:8081"
+    depends_on:
+      postgres-wellness:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: [appnet]
+    restart: unless-stopped
+
+  goal-tracking-service:
+    build:
+      context: ../goal-tracking-service
+      dockerfile: Dockerfile
+    image: goal-tracking-service:local
+    container_name: goal-tracking-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    ports:
+      - "${GOAL_PORT}:8086"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks: [appnet]
+    restart: unless-stopped
+
+  api-gateway:
+    build:
+      context: ../api-gateway
+      dockerfile: Dockerfile
+    image: api-gateway:local
+    container_name: api-gateway
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    ports:
+      - "${API_GATEWAY_PORT}:9000"
+    depends_on:
+      event-service:
+        condition: service_started
+      wellness-resource-service:
+        condition: service_started
+      goal-tracking-service:
+        condition: service_started
+    networks: [appnet]
+    restart: unless-stopped
+
+networks:
+  appnet:
+    driver: bridge
