@@ -9,7 +9,6 @@ public interface WellnessResourceService {
 
     WellnessResourceResponse createResource(WellnessResourceRequest resourceRequest);
     List<WellnessResourceResponse> getAllResources();
-    WellnessResourceResponse getResourceById(Long id);
     WellnessResourceResponse updateResource(Long id, WellnessResourceRequest resourceRequest);
     void deleteResource(Long id);
     List<WellnessResourceResponse> getResourcesByCategory(String category);

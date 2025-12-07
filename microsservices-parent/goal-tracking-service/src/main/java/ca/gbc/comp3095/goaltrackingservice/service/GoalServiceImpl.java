@@ -2,8 +2,8 @@ package ca.gbc.comp3095.goaltrackingservice.service;
 
 import ca.gbc.comp3095.goaltrackingservice.dto.GoalRequest;
 import ca.gbc.comp3095.goaltrackingservice.dto.GoalResponse;
+import ca.gbc.comp3095.goaltrackingservice.event.GoalCompletedEvent;
 import ca.gbc.comp3095.goaltrackingservice.exception.GoalNotFoundException;
-import ca.gbc.comp3095.goaltrackingservice.messaging.GoalEventPublisher;
 import ca.gbc.comp3095.goaltrackingservice.model.Goal;
 import ca.gbc.comp3095.goaltrackingservice.model.GoalStatus;
 import ca.gbc.comp3095.goaltrackingservice.repository.GoalRepository;
@@ -11,8 +11,11 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor
@@ -20,7 +23,7 @@ import org.springframework.web.server.ResponseStatusException;
 public class GoalServiceImpl implements GoalService {
 
     private final GoalRepository goalRepository;
-    private final GoalEventPublisher goalEventPublisher;
+    private final KafkaTemplate<String, GoalCompletedEvent> kafkaTemplate;
 
     @Override
     public GoalResponse createGoal(GoalRequest request) {
@@ -66,7 +69,19 @@ public class GoalServiceImpl implements GoalService {
         Goal goal = findGoal(id);
         goal.setStatus(GoalStatus.COMPLETED);
         Goal updated = goalRepository.save(goal);
-        goalEventPublisher.publishCompleted(updated);
+        
+        // Publish GoalCompletedEvent to Kafka
+        GoalCompletedEvent event = GoalCompletedEvent.builder()
+                .goalId(updated.getId())
+                .title(updated.getTitle())
+                .category(updated.getCategory())
+                .completedAt(Instant.now())
+                .userId("user-" + id) // In real scenario, get from security context
+                .build();
+        
+        kafkaTemplate.send("goal-completed-events", event.getGoalId(), event);
+        log.info("Published GoalCompletedEvent for goal {}", updated.getId());
+        
         return mapToResponse(updated);
     }
 

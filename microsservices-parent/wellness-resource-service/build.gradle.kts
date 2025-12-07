@@ -31,6 +31,13 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-cache")
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
     implementation("org.springframework.boot:spring-boot-starter-web")
+    
+    // Resilience4J
+    implementation("io.github.resilience4j:resilience4j-spring-boot3:2.1.0")
+    implementation("org.springframework.boot:spring-boot-starter-aop")
+    
+    // Swagger/OpenAPI
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0")
     implementation("org.flywaydb:flyway-core")
     implementation("org.flywaydb:flyway-database-postgresql")
     compileOnly("org.projectlombok:lombok")

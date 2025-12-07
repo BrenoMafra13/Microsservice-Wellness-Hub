@@ -22,18 +22,20 @@ configurations {
 
 repositories {
     mavenCentral()
-    maven(url = "https://packages.confluent.io/maven/")
 }
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("org.springframework.kafka:spring-kafka")
-    implementation("io.confluent:kafka-json-serializer:7.7.1")
-    implementation("io.github.resilience4j:resilience4j-spring-boot3:2.2.0")
     implementation("org.flywaydb:flyway-core:11.7.2")
     implementation("org.flywaydb:flyway-database-postgresql:11.7.2")
+    
+    // Kafka
+    implementation("org.springframework.kafka:spring-kafka")
+    
+    // Swagger/OpenAPI
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0")
     runtimeOnly("org.postgresql:postgresql")
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")

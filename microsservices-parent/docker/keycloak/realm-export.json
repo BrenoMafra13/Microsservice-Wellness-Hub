@@ -1,55 +1,89 @@
 {
-  "realm": "wellness-hub",
+  "realm": "studentwellnesshub",
   "enabled": true,
-  "displayName": "Student Wellness Hub",
-  "loginWithEmailAllowed": true,
+  "sslRequired": "none",
   "registrationAllowed": false,
-  "verifyEmail": false,
-  "roles": {
-    "realm": [
-      { "name": "student", "description": "Student role for setting goals and registering for events" },
-      { "name": "staff", "description": "Staff role for managing wellness resources" }
-    ]
-  },
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
   "clients": [
     {
-      "clientId": "api-gateway",
-      "protocol": "openid-connect",
-      "publicClient": true,
+      "clientId": "wellness-hub-client",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "wellness-hub-secret",
+      "redirectUris": ["*"],
+      "webOrigins": ["*"],
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": true,
-      "serviceAccountsEnabled": false,
-      "redirectUris": [ "*" ],
-      "webOrigins": [ "*" ],
-      "attributes": {
-        "post.logout.redirect.uris": "*"
-      },
-      "defaultClientScopes": [ "roles", "profile", "email" ],
-      "optionalClientScopes": [ "address", "phone", "microprofile-jwt" ]
+      "serviceAccountsEnabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect"
     }
   ],
+  "roles": {
+    "realm": [
+      {
+        "name": "student",
+        "description": "Student role for creating goals and registering for events"
+      },
+      {
+        "name": "staff",
+        "description": "Staff role for managing wellness resources"
+      },
+      {
+        "name": "admin",
+        "description": "Admin role with full access"
+      }
+    ]
+  },
   "users": [
     {
-      "username": "admin",
-      "email": "admin@student.example.com",
-      "firstName": "Student",
-      "lastName": "Admin",
+      "username": "student1",
       "enabled": true,
-      "emailVerified": true,
-      "credentials": [ { "type": "password", "value": "password", "temporary": false } ],
-      "realmRoles": [ "student" ],
-      "requiredActions": []
+      "email": "student1@gbc.ca",
+      "firstName": "John",
+      "lastName": "Student",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "student123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["student"]
     },
     {
-      "username": "admin-staff",
-      "email": "admin@staff.example.com",
-      "firstName": "Staff",
-      "lastName": "Admin",
+      "username": "staff1",
       "enabled": true,
-      "emailVerified": true,
-      "credentials": [ { "type": "password", "value": "password", "temporary": false } ],
-      "realmRoles": [ "staff" ],
-      "requiredActions": []
+      "email": "staff1@gbc.ca",
+      "firstName": "Jane",
+      "lastName": "Staff",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "staff123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["staff"]
+    },
+    {
+      "username": "admin1",
+      "enabled": true,
+      "email": "admin1@gbc.ca",
+      "firstName": "Admin",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["admin", "student", "staff"]
     }
   ]
 }

@@ -1,107 +1,98 @@
 package ca.gbc.comp3095.apigateway.config;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Map;
-import java.util.Objects;
-import java.util.stream.Stream;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
-import org.springframework.security.config.Customizer;
+import org.springframework.core.convert.converter.Converter;
+import org.springframework.security.authentication.AbstractAuthenticationToken;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
+
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
-
-    private static final String ROLE_PREFIX = "ROLE_";
-    private static final String CLIENT_ID = "api-gateway";
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/actuator/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/goals/**").hasRole("student")
-                        .requestMatchers(HttpMethod.PUT, "/api/goals/**").hasRole("student")
-                        .requestMatchers(HttpMethod.DELETE, "/api/goals/**").hasRole("student")
-                        .requestMatchers(HttpMethod.PUT, "/api/events/*/register", "/api/events/*/unregister")
-                        .hasRole("student")
-                        .requestMatchers(HttpMethod.POST, "/api/events/**").hasRole("staff")
-                        .requestMatchers(HttpMethod.PUT, "/api/events/**").hasRole("staff")
-                        .requestMatchers(HttpMethod.DELETE, "/api/events/**").hasRole("staff")
-                        .requestMatchers(HttpMethod.POST, "/api/resources/**").hasRole("staff")
-                        .requestMatchers(HttpMethod.PUT, "/api/resources/**").hasRole("staff")
-                        .requestMatchers(HttpMethod.DELETE, "/api/resources/**").hasRole("staff")
-                        .anyRequest().authenticated())
-                .oauth2ResourceServer(oauth2 -> oauth2
-                        .jwt(jwt -> jwt.jwtAuthenticationConverter(this::jwtAuthenticationConverter)))
-                .httpBasic(Customizer.withDefaults());
-
+        http
+            .csrf(csrf -> csrf.disable())
+            .authorizeHttpRequests(auth -> auth
+                // Public endpoints
+                .requestMatchers("/actuator/**").permitAll()
+                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").hasRole("admin")
+                
+                // Event endpoints - students can register, staff can manage
+                .requestMatchers("POST", "/api/events").hasAnyRole("staff", "admin")
+                .requestMatchers("PUT", "/api/events/{id}").hasAnyRole("staff", "admin")
+                .requestMatchers("DELETE", "/api/events/{id}").hasAnyRole("staff", "admin")
+                .requestMatchers("PUT", "/api/events/{id}/register").hasAnyRole("student", "admin")
+                .requestMatchers("PUT", "/api/events/{id}/unregister").hasAnyRole("student", "admin")
+                .requestMatchers("GET", "/api/events/**").authenticated()
+                
+                // Resource endpoints - staff can manage, all can view
+                .requestMatchers("POST", "/api/resources").hasAnyRole("staff", "admin")
+                .requestMatchers("PUT", "/api/resources/{id}").hasAnyRole("staff", "admin")
+                .requestMatchers("DELETE", "/api/resources/{id}").hasAnyRole("staff", "admin")
+                .requestMatchers("GET", "/api/resources/**").authenticated()
+                
+                // Goal endpoints - students can manage their own goals
+                .requestMatchers("/api/goals/**").hasAnyRole("student", "admin")
+                
+                .anyRequest().authenticated()
+            )
+            .oauth2ResourceServer(oauth2 -> oauth2
+                .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
+            )
+            .sessionManagement(session -> session
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            );
+        
         return http.build();
     }
 
-    private JwtAuthenticationToken jwtAuthenticationConverter(Jwt jwt) {
-        Collection<GrantedAuthority> authorities = Stream.concat(
-                        realmRoles(jwt).stream(),
-                        clientRoles(jwt).stream())
-                .toList();
-
-        return new JwtAuthenticationToken(jwt, authorities, jwt.getSubject());
+    @Bean
+    public Converter<Jwt, AbstractAuthenticationToken> jwtAuthenticationConverter() {
+        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
+        converter.setJwtGrantedAuthoritiesConverter(jwtGrantedAuthoritiesConverter());
+        return converter;
     }
 
-    private Collection<GrantedAuthority> realmRoles(Jwt jwt) {
-        Map<String, Object> realmAccess = jwt.getClaim("realm_access");
-        if (realmAccess == null) {
-            return Collections.emptyList();
-        }
-
-        Object roles = realmAccess.get("roles");
-        return convertRoles(roles);
-    }
-
-    private Collection<GrantedAuthority> clientRoles(Jwt jwt) {
-        Map<String, Object> resourceAccess = jwt.getClaim("resource_access");
-        if (resourceAccess == null) {
-            return Collections.emptyList();
-        }
-
-        Object client = resourceAccess.get(CLIENT_ID);
-        if (!(client instanceof Map<?, ?> clientMap)) {
-            return Collections.emptyList();
-        }
-
-        return convertRoles(clientMap.get("roles"));
-    }
-
-    private Collection<GrantedAuthority> convertRoles(Object roles) {
-        if (!(roles instanceof Collection<?> roleCollection)) {
-            return Collections.emptyList();
-        }
-
-        Collection<GrantedAuthority> authorities = new ArrayList<>();
-        for (Object role : roleCollection) {
-            if (Objects.isNull(role)) {
-                continue;
+    @Bean
+    public Converter<Jwt, Collection<GrantedAuthority>> jwtGrantedAuthoritiesConverter() {
+        return jwt -> {
+            // Extract realm roles
+            Map<String, Object> realmAccess = jwt.getClaim("realm_access");
+            Collection<GrantedAuthority> realmRoles = List.of();
+            
+            if (realmAccess != null && realmAccess.containsKey("roles")) {
+                @SuppressWarnings("unchecked")
+                List<String> roles = (List<String>) realmAccess.get("roles");
+                realmRoles = roles.stream()
+                    .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                    .collect(Collectors.toList());
             }
-            String roleName = role.toString();
-            if (!roleName.startsWith(ROLE_PREFIX)) {
-                roleName = ROLE_PREFIX + roleName;
-            }
-            authorities.add(new SimpleGrantedAuthority(roleName));
-        }
 
-        return authorities;
+            // Extract scope-based authorities
+            JwtGrantedAuthoritiesConverter scopesConverter = new JwtGrantedAuthoritiesConverter();
+            Collection<GrantedAuthority> scopeAuthorities = scopesConverter.convert(jwt);
+
+            // Combine both
+            return Stream.concat(realmRoles.stream(), scopeAuthorities.stream())
+                .collect(Collectors.toList());
+        };
     }
 }
