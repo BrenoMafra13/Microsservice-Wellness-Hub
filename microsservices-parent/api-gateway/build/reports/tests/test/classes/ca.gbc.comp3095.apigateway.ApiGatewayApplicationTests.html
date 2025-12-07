@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta http-equiv="x-ua-compatible" content="IE=edge"/>
+<title>Test results - ApiGatewayApplicationTests</title>
+<link href="../css/base-style.css" rel="stylesheet" type="text/css"/>
+<link href="../css/style.css" rel="stylesheet" type="text/css"/>
+<script src="../js/report.js" type="text/javascript"></script>
+</head>
+<body>
+<div id="content">
+<h1>ApiGatewayApplicationTests</h1>
+<div class="breadcrumbs">
+<a href="../index.html">all</a> &gt; 
+<a href="../packages/ca.gbc.comp3095.apigateway.html">ca.gbc.comp3095.apigateway</a> &gt; ApiGatewayApplicationTests</div>
+<div id="summary">
+<table>
+<tr>
+<td>
+<div class="summaryGroup">
+<table>
+<tr>
+<td>
+<div class="infoBox" id="tests">
+<div class="counter">1</div>
+<p>tests</p>
+</div>
+</td>
+<td>
+<div class="infoBox" id="failures">
+<div class="counter">0</div>
+<p>failures</p>
+</div>
+</td>
+<td>
+<div class="infoBox" id="ignored">
+<div class="counter">0</div>
+<p>ignored</p>
+</div>
+</td>
+<td>
+<div class="infoBox" id="duration">
+<div class="counter">2.088s</div>
+<p>duration</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</td>
+<td>
+<div class="infoBox success" id="successRate">
+<div class="percent">100%</div>
+<p>successful</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="tab-container">
+<ul class="tabLinks">
+<li>
+<a href="#">Tests</a>
+</li>
+<li>
+<a href="#">Standard output</a>
+</li>
+</ul>
+<div class="tab">
+<h2>Tests</h2>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Duration</th>
+<th>Result</th>
+</tr>
+</thead>
+<tr>
+<td class="success">contextLoads()</td>
+<td class="success">2.088s</td>
+<td class="success">passed</td>
+</tr>
+</table>
+</div>
+<div class="tab">
+<h2>Standard output</h2>
+<span class="code">
+<pre>11:12:56.197 [Test worker] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [ca.gbc.comp3095.apigateway.ApiGatewayApplicationTests]: ApiGatewayApplicationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+11:12:56.321 [Test worker] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration ca.gbc.comp3095.apigateway.ApiGatewayApplication for test class ca.gbc.comp3095.apigateway.ApiGatewayApplicationTests
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.7)
+
+2025-12-06T11:12:57.118-05:00  INFO 21308 --- [api-gateway] [    Test worker] c.g.c.a.ApiGatewayApplicationTests       : Starting ApiGatewayApplicationTests using Java 17.0.14 with PID 21308 (started by Stylish21 in C:\Users\Stylish21\Desktop\Carlos\StudentWellnessHub_Assignment2_Fixed\microsservices-parent\api-gateway)
+2025-12-06T11:12:57.118-05:00  INFO 21308 --- [api-gateway] [    Test worker] c.g.c.a.ApiGatewayApplicationTests       : No active profile set, falling back to 1 default profile: &quot;default&quot;
+2025-12-06T11:12:59.488-05:00  INFO 21308 --- [api-gateway] [    Test worker] o.s.cloud.context.scope.GenericScope     : BeanFactory id=e0bc52e9-9c9a-3ad6-94b0-7302cc5cfaff
+2025-12-06T11:13:02.155-05:00  INFO 21308 --- [api-gateway] [    Test worker] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 3 endpoints beneath base path '/actuator'
+2025-12-06T11:13:02.329-05:00  WARN 21308 --- [api-gateway] [    Test worker] thorizationManagerRequestMatcherRegistry : One of the patterns in [POST, /api/events] is missing a leading slash. This is discouraged; please include the leading slash in all your request matcher patterns. In future versions of Spring Security, leaving out the leading slash will result in an exception.
+2025-12-06T11:13:02.329-05:00  WARN 21308 --- [api-gateway] [    Test worker] thorizationManagerRequestMatcherRegistry : One of the patterns in [PUT, /api/events/{id}] is missing a leading slash. This is discouraged; please include the leading slash in all your request matcher patterns. In future versions of Spring Security, leaving out the leading slash will result in an exception.
+2025-12-06T11:13:02.329-05:00  WARN 21308 --- [api-gateway] [    Test worker] thorizationManagerRequestMatcherRegistry : One of the patterns in [DELETE, /api/events/{id}] is missing a leading slash. This is discouraged; please include the leading slash in all your request matcher patterns. In future versions of Spring Security, leaving out the leading slash will result in an exception.
+2025-12-06T11:13:02.340-05:00  WARN 21308 --- [api-gateway] [    Test worker] thorizationManagerRequestMatcherRegistry : One of the patterns in [PUT, /api/events/{id}/register] is missing a leading slash. This is discouraged; please include the leading slash in all your request matcher patterns. In future versions of Spring Security, leaving out the leading slash will result in an exception.
+2025-12-06T11:13:02.343-05:00  WARN 21308 --- [api-gateway] [    Test worker] thorizationManagerRequestMatcherRegistry : One of the patterns in [PUT, /api/events/{id}/unregister] is missing a leading slash. This is discouraged; please include the leading slash in all your request matcher patterns. In future versions of Spring Security, leaving out the leading slash will result in an exception.
+2025-12-06T11:13:02.343-05:00  WARN 21308 --- [api-gateway] [    Test worker] thorizationManagerRequestMatcherRegistry : One of the patterns in [GET, /api/events/**] is missing a leading slash. This is discouraged; please include the leading slash in all your request matcher patterns. In future versions of Spring Security, leaving out the leading slash will result in an exception.
+2025-12-06T11:13:02.350-05:00  WARN 21308 --- [api-gateway] [    Test worker] thorizationManagerRequestMatcherRegistry : One of the patterns in [POST, /api/resources] is missing a leading slash. This is discouraged; please include the leading slash in all your request matcher patterns. In future versions of Spring Security, leaving out the leading slash will result in an exception.
+2025-12-06T11:13:02.350-05:00  WARN 21308 --- [api-gateway] [    Test worker] thorizationManagerRequestMatcherRegistry : One of the patterns in [PUT, /api/resources/{id}] is missing a leading slash. This is discouraged; please include the leading slash in all your request matcher patterns. In future versions of Spring Security, leaving out the leading slash will result in an exception.
+2025-12-06T11:13:02.360-05:00  WARN 21308 --- [api-gateway] [    Test worker] thorizationManagerRequestMatcherRegistry : One of the patterns in [DELETE, /api/resources/{id}] is missing a leading slash. This is discouraged; please include the leading slash in all your request matcher patterns. In future versions of Spring Security, leaving out the leading slash will result in an exception.
+2025-12-06T11:13:02.364-05:00  WARN 21308 --- [api-gateway] [    Test worker] thorizationManagerRequestMatcherRegistry : One of the patterns in [GET, /api/resources/**] is missing a leading slash. This is discouraged; please include the leading slash in all your request matcher patterns. In future versions of Spring Security, leaving out the leading slash will result in an exception.
+2025-12-06T11:13:04.875-05:00  INFO 21308 --- [api-gateway] [    Test worker] c.g.c.a.ApiGatewayApplicationTests       : Started ApiGatewayApplicationTests in 8.248 seconds (process running for 9.742)
+</pre>
+</span>
+</div>
+</div>
+<div id="footer">
+<p>
+<div>
+<label class="hidden" id="label-for-line-wrapping-toggle" for="line-wrapping-toggle">Wrap lines
+<input id="line-wrapping-toggle" type="checkbox" autocomplete="off"/>
+</label>
+</div>Generated by 
+<a href="https://www.gradle.org">Gradle 8.14.3</a> at Dec 6, 2025, 11:13:07 a.m.</p>
+</div>
+</div>
+</body>
+</html>
